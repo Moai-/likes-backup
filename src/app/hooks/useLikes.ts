@@ -19,6 +19,58 @@ export function useLikes() {
 		})();
 	}, []);
 
+	const cacheThumbnails = useCallback(
+		async (subset?: NormalizedVideo[]) => {
+			const list = ((Array.isArray(subset) && subset) || items)
+				.filter((v) => !v.thumbnailLocalPath && v.thumbnailUrl) // not cached yet
+				.map((v) => ({ id: v.id, url: v.thumbnailUrl! }));
+			if (list.length === 0) {
+				toaster.create({
+					title: "All thumbnails already cached",
+					type: "info",
+				});
+				return;
+			}
+			const map = await window.bridge.cacheThumbnails(list);
+			// persist paths into Dexie
+			await db.transaction("rw", db.videos, async () => {
+				for (const v of list) {
+					const p = map[v.id];
+					if (p) await db.videos.update(v.id, { thumbnailLocalPath: p });
+				}
+			});
+			const all = await db.videos.toArray();
+			setItems(all.sort(sortByDateLoggedDesc));
+			toaster.create({
+				title: `Cached ${Object.values(map).filter(Boolean).length} thumbnails`,
+				type: "success",
+			});
+		},
+		[items],
+	);
+
+	const checkAvailability = useCallback(
+		async (subset?: NormalizedVideo[]) => {
+			const ids = (subset ?? items).map((v) => v.id);
+			if (ids.length === 0) return;
+			const missingIds = await window.bridge.checkAvailability(ids);
+			await db.transaction("rw", db.videos, async () => {
+				// mark missing true for reported, false for others
+				const missingSet = new Set(missingIds);
+				for (const v of ids) {
+					await db.videos.update(v, { isMissing: missingSet.has(v) });
+				}
+			});
+			const all = await db.videos.toArray();
+			setItems(all.sort(sortByDateLoggedDesc));
+			toaster.create({
+				title: `Marked ${missingIds.length} as missing`,
+				type: "info",
+			});
+		},
+		[items],
+	);
+
 	const filtered = useMemo(() => {
 		if (!query) return items;
 		const q = query.toLowerCase();
@@ -54,6 +106,11 @@ export function useLikes() {
 			setCount(all.length);
 
 			toaster.create({ title: `Synced ${fetched} items`, type: "success" });
+			try {
+				await cacheThumbnails();
+			} catch {
+				/* ignore */
+			}
 		} catch (e) {
 			toaster.create({
 				title: "Sync failed",
@@ -63,7 +120,7 @@ export function useLikes() {
 		} finally {
 			setSyncing(false);
 		}
-	}, []);
+	}, [cacheThumbnails]);
 
 	const exportJson = useCallback(async () => {
 		const data = await db.videos.toArray();
@@ -82,6 +139,8 @@ export function useLikes() {
 		// actions
 		syncLikes,
 		exportJson,
+		cacheThumbnails,
+		checkAvailability,
 		// ui state
 		isSyncing,
 	};

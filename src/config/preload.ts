@@ -14,6 +14,13 @@ const api = {
 		) as Promise<LikesPage>,
 	exportJson: (payload: unknown) =>
 		ipcRenderer.invoke("export.json", payload) as Promise<boolean>,
+
+	cacheThumbnails: (items: Array<{ id: string; url: string }>) =>
+		ipcRenderer.invoke("thumbnail.cacheMany", items) as Promise<
+			Record<string, string | null>
+		>,
+	checkAvailability: (ids: string[]) =>
+		ipcRenderer.invoke("youtube.checkAvailability", ids) as Promise<string[]>,
 };
 
 contextBridge.exposeInMainWorld("bridge", api);

@@ -1,11 +1,27 @@
-import { app, BrowserWindow, shell, ipcMain } from "electron";
+import { app, BrowserWindow, shell, protocol } from "electron";
+import { URL } from "node:url";
+import { createReadStream } from "node:fs";
 import path from "node:path";
 import "./api";
+import { THUMB_DIR } from "./thumbs";
 
 const __dirname = path.dirname(__filename);
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 
 let mainWindow: BrowserWindow | null = null;
+
+protocol.registerSchemesAsPrivileged([
+	{
+		scheme: "thumb",
+		privileges: {
+			standard: true,
+			secure: true,
+			supportFetchAPI: true,
+			corsEnabled: true,
+			stream: true,
+		},
+	},
+]);
 
 async function createWindow() {
 	mainWindow = new BrowserWindow({
@@ -43,6 +59,15 @@ app.on("window-all-closed", () => {
 });
 
 app.whenReady().then(() => {
+	protocol.handle("thumb", async (request) => {
+		// thumb:///FILENAME.ext
+		// Only allow basename to avoid path traversal
+		const fileName = request.url.substring(8, request.url.length - 1);
+
+		const fullPath = path.join(THUMB_DIR, fileName);
+		// Let Chromium infer the content-type; stream the file
+		return new Response(createReadStream(fullPath) as any);
+	});
 	createWindow();
 	app.on("activate", () => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow();

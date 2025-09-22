@@ -9,7 +9,10 @@ declare global {
 			googleSignOut(): Promise<boolean>;
 			listLikesPage(pageToken?: string): Promise<LikesPage>;
 			exportJson(payload: unknown): Promise<boolean>;
-			ping(): Promise<string>;
+			cacheThumbnails(
+				items: Array<{ id: string; url: string }>,
+			): Promise<Record<string, string | null>>;
+			checkAvailability(ids: string[]): Promise<string[]>;
 		};
 	}
 }

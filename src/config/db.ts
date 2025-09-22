@@ -10,6 +10,21 @@ class YTDB extends Dexie {
 		this.version(1).stores({
 			videos: "id, title, channelTitle, dateLogged",
 		});
+
+		this.version(2)
+			.stores({
+				videos:
+					"id, title, channelTitle, dateLogged, isMissing, thumbnailLocalPath",
+			})
+			.upgrade(async (tx) => {
+				tx.table("videos")
+					.toCollection()
+					.modify((v: any) => {
+						if (typeof v.isMissing === "undefined") v.isMissing = false;
+						if (typeof v.thumbnailLocalPath === "undefined")
+							v.thumbnailLocalPath = undefined;
+					});
+			});
 	}
 }
 

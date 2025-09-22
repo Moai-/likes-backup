@@ -8,6 +8,7 @@ import {
 	TOKEN_PATH,
 } from "./oauth";
 import fs from "node:fs/promises";
+import { cacheOneThumbnail } from "./thumbs";
 
 ipcMain.handle("google.signIn", async () => {
 	const auth = await createOAuthClient();
@@ -76,4 +77,44 @@ ipcMain.handle("export.json", async (_evt, payload: unknown) => {
 	}
 	await fs.writeFile(filePath, JSON.stringify(payload, null, 2), "utf8");
 	return true;
+});
+
+ipcMain.handle(
+	"thumbnail.cacheMany",
+	async (_evt, items: Array<{ id: string; url: string }>) => {
+		const results: Record<string, string | null> = {};
+		// Limit concurrency to be gentle
+		const queue = items.slice();
+		const workers = Math.min(6, Math.max(1, items.length));
+		const runWorker = async () => {
+			while (queue.length) {
+				// biome-ignore lint/style/noNonNullAssertion: there will always be an item when length is non-zero
+				const { id, url } = queue.shift()!;
+				results[id] = await cacheOneThumbnail(id, url);
+			}
+		};
+		await Promise.all(Array.from({ length: workers }, runWorker));
+		return results; // { [id]: '/abs/path' | null }
+	},
+);
+
+ipcMain.handle("youtube.checkAvailability", async (_evt, ids: string[]) => {
+	const yt = await getYoutubeClient();
+	const missing = new Set<string>(ids);
+
+	// YouTube Data API allows up to 50 IDs per call
+	for (let i = 0; i < ids.length; i += 50) {
+		const batch = ids.slice(i, i + 50);
+		const res = await yt.videos.list({
+			part: ["id"],
+			id: batch,
+			maxResults: 50,
+		});
+		const returned = new Set(
+			(res.data.items ?? []).map((it) => it.id).filter(Boolean),
+		);
+		// Items that still exist are not missing
+		for (const id of batch) if (returned.has(id)) missing.delete(id);
+	}
+	return Array.from(missing); // video IDs that are now unavailable
 });

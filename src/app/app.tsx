@@ -5,8 +5,17 @@ import { ControlsBar, HeaderBar, VideoGrid } from "@/components/app";
 
 export function App() {
 	const { profile, isAuthed, signIn, signOut } = useProfile();
-	const { count, query, setQuery, filtered, syncLikes, exportJson, isSyncing } =
-		useLikes();
+	const {
+		count,
+		query,
+		setQuery,
+		filtered,
+		syncLikes,
+		exportJson,
+		cacheThumbnails,
+		checkAvailability,
+		isSyncing,
+	} = useLikes();
 
 	return (
 		<Container maxW="7xl" py={6}>
@@ -20,6 +29,8 @@ export function App() {
 					onQuery={setQuery}
 					onSync={syncLikes}
 					onExport={exportJson}
+					onCacheThumbs={cacheThumbnails}
+					onCheckAvailability={checkAvailability}
 				/>
 				<VideoGrid items={filtered} />
 			</Stack>

@@ -17,6 +17,8 @@ type Props = {
 	onQuery: (v: string) => void;
 	onSync: () => void;
 	onExport: () => void;
+	onCacheThumbs: () => void;
+	onCheckAvailability: () => void;
 };
 
 export function ControlsBar({
@@ -27,6 +29,8 @@ export function ControlsBar({
 	onQuery,
 	onSync,
 	onExport,
+	onCacheThumbs,
+	onCheckAvailability,
 }: Props) {
 	return (
 		<Card.Root>
@@ -38,6 +42,15 @@ export function ControlsBar({
 					</Button>
 					<Button onClick={onExport} disabled={totalCount === 0}>
 						Export JSON
+					</Button>
+					<Button onClick={onCacheThumbs} disabled={totalCount === 0}>
+						Cache thumbnails
+					</Button>
+					<Button
+						onClick={onCheckAvailability}
+						disabled={!isAuthed || totalCount === 0}
+					>
+						Check availability
 					</Button>
 					<Text color="gray.500">
 						Saved: {totalCount.toLocaleString()} items

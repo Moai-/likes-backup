@@ -14,6 +14,8 @@ export type NormalizedVideo = {
 	publishedAt?: string;
 	thumbnailUrl?: string; // best available
 	dateLogged: string; // when we saved locally
+	thumbnailLocalPath?: string; // absolute path to cached file
+	isMissing?: boolean;
 };
 
 export type LikesPage = {

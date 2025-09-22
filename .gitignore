@@ -1,0 +1,9 @@
+node_modules
+dist
+release
+*.log
+.DS_Store
+token.json
+client_secret.json
+assets/google-client.json
+google-client.*

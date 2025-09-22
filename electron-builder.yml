@@ -1,0 +1,16 @@
+appId: com.example.yt-liked-backup
+productName: YTLikedBackup
+files:
+  - dist/**
+  - package.json
+directories:
+  output: release
+extraResources:
+  - from: assets/google-client.json
+    to: google-client.json   # lands at process.resourcesPath/google-client.json
+mac:
+  target: dmg
+win:
+  target: nsis
+linux:
+  target: AppImage

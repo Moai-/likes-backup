@@ -1,14 +1,17 @@
 import type { OAuthProfile, LikesPage, NormalizedVideo } from "@/config/google";
-import { ipcMain, dialog } from "electron";
+import { ipcMain, dialog, shell } from "electron";
 import {
 	createOAuthClient,
 	ensureAuthorized,
 	getYoutubeClient,
-	normalize,
 	TOKEN_PATH,
 } from "./oauth";
 import fs from "node:fs/promises";
 import { cacheOneThumbnail } from "./thumbs";
+
+ipcMain.handle("open.external", async (_evt, url: string) => {
+	await shell.openExternal(url);
+})
 
 ipcMain.handle("google.signIn", async () => {
 	const auth = await createOAuthClient();

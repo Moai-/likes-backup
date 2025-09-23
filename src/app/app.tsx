@@ -10,6 +10,8 @@ export function App() {
 		query,
 		setQuery,
 		filtered,
+		setSortMode,
+		sortMode,
 		syncLikes,
 		exportJson,
 		cacheThumbnails,
@@ -26,6 +28,8 @@ export function App() {
 					isSyncing={isSyncing}
 					totalCount={count}
 					query={query}
+					sortMode={sortMode}
+					onSortMode={setSortMode}
 					onQuery={setQuery}
 					onSync={syncLikes}
 					onExport={exportJson}

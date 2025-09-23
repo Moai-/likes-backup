@@ -21,6 +21,8 @@ const api = {
 		>,
 	checkAvailability: (ids: string[]) =>
 		ipcRenderer.invoke("youtube.checkAvailability", ids) as Promise<string[]>,
+
+	openExternal: (url: string) => ipcRenderer.invoke("open.external", url) as Promise<void>,
 };
 
 contextBridge.exposeInMainWorld("bridge", api);

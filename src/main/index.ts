@@ -60,12 +60,9 @@ app.on("window-all-closed", () => {
 
 app.whenReady().then(() => {
 	protocol.handle("thumb", async (request) => {
-		// thumb:///FILENAME.ext
-		// Only allow basename to avoid path traversal
-		const fileName = request.url.substring(8, request.url.length - 1);
-
+		const u = new URL(request.url);
+		const fileName = decodeURIComponent(u.pathname.replace(/^\/+/, ""))
 		const fullPath = path.join(THUMB_DIR, fileName);
-		// Let Chromium infer the content-type; stream the file
 		return new Response(createReadStream(fullPath) as any);
 	});
 	createWindow();

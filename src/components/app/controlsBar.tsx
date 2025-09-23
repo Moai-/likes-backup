@@ -1,3 +1,4 @@
+import { SortMode } from "@/app/utils/sort";
 import {
 	Box,
 	Button,
@@ -8,6 +9,7 @@ import {
 	Select,
 	Spinner,
 	Text,
+	createListCollection,
 } from "@chakra-ui/react";
 
 type Props = {
@@ -28,6 +30,17 @@ type Props = {
 	onCacheThumbs: () => void;
 	onCheckAvailability: () => void;
 };
+
+const sortOptions = createListCollection({
+	items: [
+		{ label: 'Title - Asc', value: 'title-asc'},
+		{ label: 'Liked - Asc', value: 'liked-asc'},
+		{ label: 'Liked - Desc', value: 'liked-desc'},
+		{ label: 'Logged - Desc', value: 'logged-desc'},
+		{ label: 'Channel - Asc', value: 'channel-asc'},
+
+	]
+});
 
 export function ControlsBar({
 	isAuthed,
@@ -63,9 +76,11 @@ export function ControlsBar({
 						Check availability
 					</Button>
 					<Select.Root
-						value={sortMode}
+						multiple={false}
+						collection={sortOptions}
+						value={[sortMode]}
 						onValueChange={(details) =>
-							onSortMode(details.value as Props["sortMode"])
+							onSortMode(details.value[0] as SortMode)
 						}
 						maxW="220px"
 					>
@@ -80,13 +95,9 @@ export function ControlsBar({
 						</Select.Control>
 						<Select.Positioner>
 							<Select.Content>
-								<Select.Item item="liked-desc">Liked: newest first</Select.Item>
-								<Select.Item item="liked-asc">Liked: oldest first</Select.Item>
-								<Select.Item item="logged-desc">
-									Saved: newest first
-								</Select.Item>
-								<Select.Item item="title-asc">Title (A→Z)</Select.Item>
-								<Select.Item item="channel-asc">Channel (A→Z)</Select.Item>
+								{sortOptions.items.map((sortOption) => (
+									<Select.Item item={sortOption} key={sortOption.value}>{sortOption.label}</Select.Item>
+								))}
 							</Select.Content>
 						</Select.Positioner>
 					</Select.Root>

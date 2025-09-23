@@ -149,6 +149,7 @@ export function useLikes() {
 		count,
 		// search
 		query,
+		sortMode,
 		setQuery,
 		setSortMode,
 		filtered,

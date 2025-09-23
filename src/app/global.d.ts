@@ -13,6 +13,7 @@ declare global {
 				items: Array<{ id: string; url: string }>,
 			): Promise<Record<string, string | null>>;
 			checkAvailability(ids: string[]): Promise<string[]>;
+			openExternal(url: string): Promise<void>;
 		};
 	}
 }

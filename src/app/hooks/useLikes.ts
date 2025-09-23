@@ -2,22 +2,37 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { NormalizedVideo } from "@/config/google";
 import { db } from "@/config/db";
 import { toaster } from "@/components/ui/toaster";
-import { sortByDateLoggedDesc } from "@/app/utils/sort";
+import { sortItems, type SortMode } from "@/app/utils/sort";
 
 export function useLikes() {
 	const [items, setItems] = useState<NormalizedVideo[]>([]);
 	const [count, setCount] = useState(0);
 	const [query, setQuery] = useState("");
 	const [isSyncing, setSyncing] = useState(false);
+	const [sortMode, setSortMode] = useState<SortMode>("liked-desc");
+
+	const refreshFromDB = useCallback(async () => {
+		const all = await db.videos.toArray();
+		setItems(sortItems(all, sortMode));
+		setCount(all.length);
+	}, [sortMode]);
+
+	useEffect(() => {
+		(async () => {
+			const all = await db.videos.toArray();
+			setItems(sortItems(all, sortMode));
+			setCount(all.length);
+		})();
+	}, [sortMode]);
 
 	// Initial load
 	useEffect(() => {
 		(async () => {
 			const all = await db.videos.toArray();
-			setItems(all.sort(sortByDateLoggedDesc));
+			await refreshFromDB();
 			setCount(all.length);
 		})();
-	}, []);
+	}, [refreshFromDB]);
 
 	const cacheThumbnails = useCallback(
 		async (subset?: NormalizedVideo[]) => {
@@ -40,13 +55,13 @@ export function useLikes() {
 				}
 			});
 			const all = await db.videos.toArray();
-			setItems(all.sort(sortByDateLoggedDesc));
+			await refreshFromDB();
 			toaster.create({
 				title: `Cached ${Object.values(map).filter(Boolean).length} thumbnails`,
 				type: "success",
 			});
 		},
-		[items],
+		[items, refreshFromDB],
 	);
 
 	const checkAvailability = useCallback(
@@ -62,13 +77,13 @@ export function useLikes() {
 				}
 			});
 			const all = await db.videos.toArray();
-			setItems(all.sort(sortByDateLoggedDesc));
+			await refreshFromDB();
 			toaster.create({
 				title: `Marked ${missingIds.length} as missing`,
 				type: "info",
 			});
 		},
-		[items],
+		[items, refreshFromDB],
 	);
 
 	const filtered = useMemo(() => {
@@ -102,7 +117,7 @@ export function useLikes() {
 			} while (pageToken);
 
 			const all = await db.videos.toArray();
-			setItems(all.sort(sortByDateLoggedDesc));
+			await refreshFromDB();
 			setCount(all.length);
 
 			toaster.create({ title: `Synced ${fetched} items`, type: "success" });
@@ -120,7 +135,7 @@ export function useLikes() {
 		} finally {
 			setSyncing(false);
 		}
-	}, [cacheThumbnails]);
+	}, [cacheThumbnails, refreshFromDB]);
 
 	const exportJson = useCallback(async () => {
 		const data = await db.videos.toArray();
@@ -135,6 +150,7 @@ export function useLikes() {
 		// search
 		query,
 		setQuery,
+		setSortMode,
 		filtered,
 		// actions
 		syncLikes,

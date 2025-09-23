@@ -25,6 +25,20 @@ class YTDB extends Dexie {
 							v.thumbnailLocalPath = undefined;
 					});
 			});
+
+		this.version(3)
+			.stores({
+				videos:
+					"id, title, channelTitle, dateLogged, likedAt, isMissing, thumbnailLocalPath",
+			})
+			.upgrade((tx) =>
+				tx
+					.table("videos")
+					.toCollection()
+					.modify((v: any) => {
+						if (typeof v.likedAt === "undefined") v.likedAt = undefined;
+					}),
+			);
 	}
 }
 

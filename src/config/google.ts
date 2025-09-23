@@ -12,6 +12,7 @@ export type NormalizedVideo = {
 	channelTitle?: string;
 	duration?: string; // ISO 8601
 	publishedAt?: string;
+	likedAt?: string;
 	thumbnailUrl?: string; // best available
 	dateLogged: string; // when we saved locally
 	thumbnailLocalPath?: string; // absolute path to cached file

@@ -1,4 +1,4 @@
-import type { OAuthProfile, LikesPage } from "@/config/google";
+import type { OAuthProfile, LikesPage, NormalizedVideo } from "@/config/google";
 import { ipcMain, dialog } from "electron";
 import {
 	createOAuthClient,
@@ -49,19 +49,71 @@ ipcMain.handle(
 	async (_evt, pageToken?: string): Promise<LikesPage> => {
 		const yt = await getYoutubeClient();
 
-		// Approach A: videos.list myRating=like (fast, direct)
-		const resp = await yt.videos.list({
+		// 1) Get items from the Liked playlist (LL)
+		const pli = await yt.playlistItems.list({
 			part: ["snippet", "contentDetails"],
-			myRating: "like",
+			playlistId: "LL",
 			maxResults: 50,
 			pageToken,
 		});
 
-		const items = (resp.data.items ?? []).map(normalize);
+		const itemsPI = pli.data.items ?? [];
+		const nextPageToken = pli.data.nextPageToken ?? undefined;
+
+		// Collect videoIds + likedAt from playlistItems
+		const ids = itemsPI
+			.map((it) => it.contentDetails?.videoId)
+			.filter((x): x is string => !!x);
+
+		// 2) Enrich with videos.list for duration, better thumbs, publish date
+		let byId = new Map<string, any>();
+		if (ids.length) {
+			const vres = await yt.videos.list({
+				part: ["snippet", "contentDetails"],
+				id: ids,
+				maxResults: 50,
+			});
+			for (const v of vres.data.items ?? []) {
+				if (v.id) byId.set(v.id, v);
+			}
+		}
+
+		// 3) Normalize
+		const pickBestThumb = (s: any) => {
+			const t = s?.thumbnails ?? {};
+			return (
+				t.maxres?.url ||
+				t.standard?.url ||
+				t.high?.url ||
+				t.medium?.url ||
+				t.default?.url
+			);
+		};
+
+		const normalized = itemsPI.map((pi) => {
+			const vid = pi.contentDetails?.videoId!;
+			const likedAt = pi.snippet?.publishedAt || undefined; // when added to Liked (you liked it)
+			const v = byId.get(vid); // may be missing if unavailable/removed
+			const s = v?.snippet ?? pi.snippet ?? {};
+			const c = v?.contentDetails ?? {};
+
+			const n: NormalizedVideo = {
+				id: vid,
+				title: s.title ?? "Unknown title",
+				channelTitle: s.channelTitle,
+				duration: c.duration,
+				publishedAt: s.publishedAt, // original publish date (if available)
+				likedAt, // << NEW
+				thumbnailUrl: pickBestThumb(s),
+				dateLogged: new Date().toISOString(),
+			};
+			return n;
+		});
+
 		return {
-			items,
-			nextPageToken: resp.data.nextPageToken ?? undefined,
-			totalFetched: items.length,
+			items: normalized,
+			nextPageToken,
+			totalFetched: normalized.length,
 		};
 	},
 );

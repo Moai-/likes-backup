@@ -15,7 +15,6 @@ export function App() {
 		syncLikes,
 		exportJson,
 		cacheThumbnails,
-		checkAvailability,
 		isSyncing,
 	} = useLikes();
 
@@ -34,7 +33,6 @@ export function App() {
 					onSync={syncLikes}
 					onExport={exportJson}
 					onCacheThumbs={cacheThumbnails}
-					onCheckAvailability={checkAvailability}
 				/>
 				<VideoGrid items={filtered} />
 			</Stack>

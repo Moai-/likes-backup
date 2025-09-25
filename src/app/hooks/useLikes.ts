@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { NormalizedVideo } from "@/config/google";
 import { db } from "@/config/db";
 import { toaster } from "@/components/ui/toaster";
-import { sortItems, type SortMode } from "@/app/utils/sort";
+import { loadSorted, type SortMode } from "@/app/utils/sort";
 
 export function useLikes() {
 	const [items, setItems] = useState<NormalizedVideo[]>([]);
@@ -12,18 +12,19 @@ export function useLikes() {
 	const [sortMode, setSortMode] = useState<SortMode>("liked-desc");
 
 	const refreshFromDB = useCallback(async () => {
-		const all = await db.videos.toArray();
-		setItems(sortItems(all, sortMode));
-		setCount(all.length);
-	}, [sortMode]);
+		const list = await loadSorted(sortMode, query);
+		// de-dup when merging title+channel matches
+		const seen = new Set<string>();
+		const unique = list.filter((v) =>
+			seen.has(v.id) ? false : (seen.add(v.id), true),
+		);
+		setItems(unique);
+		setCount(await db.videos.count());
+	}, [sortMode, query]);
 
 	useEffect(() => {
-		(async () => {
-			const all = await db.videos.toArray();
-			setItems(sortItems(all, sortMode));
-			setCount(all.length);
-		})();
-	}, [sortMode]);
+		void refreshFromDB();
+	}, [refreshFromDB]);
 
 	// Initial load
 	useEffect(() => {
@@ -54,33 +55,10 @@ export function useLikes() {
 					if (p) await db.videos.update(v.id, { thumbnailLocalPath: p });
 				}
 			});
-			const all = await db.videos.toArray();
 			await refreshFromDB();
 			toaster.create({
 				title: `Cached ${Object.values(map).filter(Boolean).length} thumbnails`,
 				type: "success",
-			});
-		},
-		[items, refreshFromDB],
-	);
-
-	const checkAvailability = useCallback(
-		async (subset?: NormalizedVideo[]) => {
-			const ids = (subset ?? items).map((v) => v.id);
-			if (ids.length === 0) return;
-			const missingIds = await window.bridge.checkAvailability(ids);
-			await db.transaction("rw", db.videos, async () => {
-				// mark missing true for reported, false for others
-				const missingSet = new Set(missingIds);
-				for (const v of ids) {
-					await db.videos.update(v, { isMissing: missingSet.has(v) });
-				}
-			});
-			const all = await db.videos.toArray();
-			await refreshFromDB();
-			toaster.create({
-				title: `Marked ${missingIds.length} as missing`,
-				type: "info",
 			});
 		},
 		[items, refreshFromDB],
@@ -111,7 +89,18 @@ export function useLikes() {
 				await db.transaction("rw", db.videos, async () => {
 					for (const v of page.items) {
 						const existing = await db.videos.get(v.id);
-						if (!existing) await db.videos.put(v); // keep first-seen (original title/thumbnail)
+						if (!existing)
+							await db.videos.put({
+								...v,
+								titleLC: (v.title ?? "").toLowerCase(),
+								channelLC: (v.channelTitle ?? "").toLowerCase(),
+								likedAtTS: v.likedAt
+									? Date.parse(v.likedAt) || undefined
+									: undefined,
+								dateLoggedTS: v.dateLogged
+									? Date.parse(v.dateLogged) || undefined
+									: undefined,
+							}); // keep first-seen (original title/thumbnail)
 					}
 				});
 			} while (pageToken);
@@ -157,7 +146,6 @@ export function useLikes() {
 		syncLikes,
 		exportJson,
 		cacheThumbnails,
-		checkAvailability,
 		// ui state
 		isSyncing,
 	};

@@ -1,4 +1,6 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: Query always available */
 import type { NormalizedVideo } from "@/config/google";
+import { db } from "@/config/db";
 
 export function sortByDateLoggedDesc(a: NormalizedVideo, b: NormalizedVideo) {
 	return (b.dateLogged || "").localeCompare(a.dateLogged || "");
@@ -36,5 +38,75 @@ export function sortItems(items: NormalizedVideo[], mode: SortMode) {
 			return copy.sort((a, b) => cmpStr(a.channelTitle, b.channelTitle));
 		default:
 			return copy;
+	}
+}
+
+export async function loadSorted(mode: SortMode, q?: string) {
+	const hasQ = !!q && q.trim().length > 0;
+	const query = (s: string) => s.toLowerCase();
+
+	console.log("query", hasQ, query(q!), mode);
+
+	switch (mode) {
+		case "liked-desc":
+			return hasQ
+				? (
+						await db.videos
+							.where("titleLC")
+							.startsWithIgnoreCase(query(q!))
+							.toArray()
+					)
+						.concat(
+							await db.videos
+								.where("channelLC")
+								.startsWithIgnoreCase(query(q!))
+								.toArray(),
+						)
+						.sort((a, b) => (b.likedAtTS ?? 0) - (a.likedAtTS ?? 0))
+				: db.videos.orderBy("likedAtTS").reverse().toArray();
+
+		case "liked-asc":
+			return hasQ
+				? (
+						await db.videos
+							.where("titleLC")
+							.startsWithIgnoreCase(query(q!))
+							.toArray()
+					)
+						.concat(
+							await db.videos
+								.where("channelLC")
+								.startsWithIgnoreCase(query(q!))
+								.toArray(),
+						)
+						.sort((a, b) => (a.likedAtTS ?? 0) - (b.likedAtTS ?? 0))
+				: db.videos.orderBy("likedAtTS").toArray();
+
+		case "logged-desc":
+			return hasQ
+				? (
+						await db.videos
+							.where("titleLC")
+							.startsWithIgnoreCase(query(q!))
+							.toArray()
+					)
+						.concat(
+							await db.videos
+								.where("channelLC")
+								.startsWithIgnoreCase(query(q!))
+								.toArray(),
+						)
+						.sort((a, b) => (b.dateLoggedTS ?? 0) - (a.dateLoggedTS ?? 0))
+				: db.videos.orderBy("dateLoggedTS").reverse().toArray();
+
+		case "title-asc":
+			return hasQ
+				? db.videos.where("titleLC").startsWithIgnoreCase(query(q!)).toArray()
+				: db.videos.orderBy("titleLC").toArray();
+
+		case "channel-asc":
+			return hasQ
+				? db.videos.where("channelLC").startsWithIgnoreCase(query(q!)).toArray()
+				: db.videos.orderBy("channelLC").toArray();
 	}
 }

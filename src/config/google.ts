@@ -9,14 +9,17 @@ export type OAuthProfile = {
 export type NormalizedVideo = {
 	id: string; // videoId
 	title: string;
+	titleLC: string;
 	channelTitle?: string;
+	channelLC: string;
 	duration?: string; // ISO 8601
 	publishedAt?: string;
 	likedAt?: string;
+	likedAtTS?: number;
 	thumbnailUrl?: string; // best available
 	dateLogged: string; // when we saved locally
+	dateLoggedTS?: number;
 	thumbnailLocalPath?: string; // absolute path to cached file
-	isMissing?: boolean;
 };
 
 export type LikesPage = {

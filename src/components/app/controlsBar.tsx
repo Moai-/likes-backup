@@ -11,6 +11,7 @@ import {
 	Text,
 	createListCollection,
 } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
 
 type Props = {
 	isAuthed: boolean;
@@ -28,33 +29,34 @@ type Props = {
 	onSync: () => void;
 	onExport: () => void;
 	onCacheThumbs: () => void;
-	onCheckAvailability: () => void;
 };
 
 const sortOptions = createListCollection({
 	items: [
-		{ label: 'Title - Asc', value: 'title-asc'},
-		{ label: 'Liked - Asc', value: 'liked-asc'},
-		{ label: 'Liked - Desc', value: 'liked-desc'},
-		{ label: 'Logged - Desc', value: 'logged-desc'},
-		{ label: 'Channel - Asc', value: 'channel-asc'},
-
-	]
+		{ label: "Title - Asc", value: "title-asc" },
+		{ label: "Liked - Asc", value: "liked-asc" },
+		{ label: "Liked - Desc", value: "liked-desc" },
+		{ label: "Logged - Desc", value: "logged-desc" },
+		{ label: "Channel - Asc", value: "channel-asc" },
+	],
 });
 
 export function ControlsBar({
 	isAuthed,
 	isSyncing,
 	totalCount,
-	query,
 	sortMode,
 	onSortMode,
 	onQuery,
 	onSync,
 	onExport,
 	onCacheThumbs,
-	onCheckAvailability,
 }: Props) {
+	const [rawQuery, setRawQuery] = useState("");
+	useEffect(() => {
+		const t = setTimeout(() => onQuery(rawQuery), 250);
+		return () => clearTimeout(t);
+	}, [rawQuery, onQuery]);
 	return (
 		<Card.Root>
 			<CardBody>
@@ -69,12 +71,8 @@ export function ControlsBar({
 					<Button onClick={onCacheThumbs} disabled={totalCount === 0}>
 						Cache thumbnails
 					</Button>
-					<Button
-						onClick={onCheckAvailability}
-						disabled={!isAuthed || totalCount === 0}
-					>
-						Check availability
-					</Button>
+				</HStack>
+				<HStack gap={3} flexWrap="wrap" mt={3}>
 					<Select.Root
 						multiple={false}
 						collection={sortOptions}
@@ -96,7 +94,9 @@ export function ControlsBar({
 						<Select.Positioner>
 							<Select.Content>
 								{sortOptions.items.map((sortOption) => (
-									<Select.Item item={sortOption} key={sortOption.value}>{sortOption.label}</Select.Item>
+									<Select.Item item={sortOption} key={sortOption.value}>
+										{sortOption.label}
+									</Select.Item>
 								))}
 							</Select.Content>
 						</Select.Positioner>
@@ -107,8 +107,8 @@ export function ControlsBar({
 					<Box flex="1" />
 					<Input
 						placeholder="Search title or channel…"
-						value={query}
-						onChange={(e) => onQuery(e.target.value)}
+						value={rawQuery}
+						onChange={(e) => setRawQuery(e.target.value)}
 						maxW="360px"
 					/>
 				</HStack>

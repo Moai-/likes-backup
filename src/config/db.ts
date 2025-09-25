@@ -39,6 +39,27 @@ class YTDB extends Dexie {
 						if (typeof v.likedAt === "undefined") v.likedAt = undefined;
 					}),
 			);
+
+		this.version(4)
+			.stores({
+				videos:
+					"id, likedAt, dateLogged, likedAtTS, dateLoggedTS, titleLC, channelLC, thumbnailLocalPath",
+			})
+			.upgrade((tx) =>
+				tx
+					.table("videos")
+					.toCollection()
+					.modify((v: any) => {
+						v.titleLC = (v.title ?? "").toLowerCase();
+						v.channelLC = (v.channelTitle ?? "").toLowerCase();
+						v.likedAtTS = v.likedAt
+							? Date.parse(v.likedAt) || undefined
+							: undefined;
+						v.dateLoggedTS = v.dateLogged
+							? Date.parse(v.dateLogged) || undefined
+							: undefined;
+					}),
+			);
 	}
 }
 

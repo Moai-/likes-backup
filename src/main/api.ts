@@ -11,7 +11,7 @@ import { cacheOneThumbnail } from "./thumbs";
 
 ipcMain.handle("open.external", async (_evt, url: string) => {
 	await shell.openExternal(url);
-})
+});
 
 ipcMain.handle("google.signIn", async () => {
 	const auth = await createOAuthClient();
@@ -109,6 +109,10 @@ ipcMain.handle(
 				likedAt, // << NEW
 				thumbnailUrl: pickBestThumb(s),
 				dateLogged: new Date().toISOString(),
+				titleLC: (s.title ?? "").toLowerCase(),
+				channelLC: (s.channelTitle ?? "").toLowerCase(),
+				likedAtTS: likedAt ? Date.parse(likedAt) || undefined : undefined,
+				dateLoggedTS: Date.now(),
 			};
 			return n;
 		});
